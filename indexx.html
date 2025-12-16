@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 سیستم سیگنال پامپ و دامپ کریپتو</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <link href="https://cdn.jsdelivr.net/gh/nicefeel/vazir-font-cdn/css/vazir.min.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Vazir', sans-serif; }
+        .pump { animation: pumpGlow 1s infinite; }
+        .dump { animation: dumpGlow 1s infinite; }
+        @keyframes pumpGlow {
+            0%, 100% { box-shadow: 0 0 5px #22c55e; }
+            50% { box-shadow: 0 0 20px #22c55e, 0 0 30px #22c55e; }
+        }
+        @keyframes dumpGlow {
+            0%, 100% { box-shadow: 0 0 5px #ef4444; }
+            50% { box-shadow: 0 0 20px #ef4444, 0 0 30px #ef4444; }
+        }
+        .signal-card { transition: all 0.3s; }
+        .signal-card:hover { transform: translateY(-5px); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .loader { border: 4px solid #1f2937; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 p-4 shadow-2xl">
+        <div class="container mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl">🚀</span>
+                <div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                        Crypto Signal Pro
+                    </h1>
+                    <p class="text-xs text-gray-300">سیستم هوشمند پامپ و دامپ</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <select id="exchangeSelect" class="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="kucoin">🟢 KuCoin (پیشنهادی)</option>
+                    <option value="bybit">🟣 Bybit</option>
+                    <option value="okx">🔵 OKX</option>
+                    <option value="mexc">🟡 MEXC</option>
+                </select>
+                
+                <div class="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg">
+                    <span class="text-sm">آخرین بروزرسانی:</span>
+                    <span id="lastUpdate" class="text-green-400 font-mono">--:--:--</span>
+                </div>
+                
+                <div id="connectionStatus" class="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg">
+                    <div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse"></div>
+                    <span>در حال اتصال...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="bg-gray-800 border-b border-gray-700 p-3">
+        <div class="container mx-auto flex flex-wrap justify-center gap-6 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">ارزهای فعال:</span>
+                <span id="activeCoins" class="text-blue-400 font-bold">0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">سیگنال‌های امروز:</span>
+                <span id="todaySignals" class="text-green-400 font-bold">0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">🚀 پامپ:</span>
+                <span id="pumpCount" class="text-green-500 font-bold">0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">📉 دامپ:</span>
+                <span id="dumpCount" class="text-red-500 font-bold">0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">دقت سیگنال‌ها:</span>
+                <span id="accuracy" class="text-yellow-400 font-bold">--%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4">
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-4 overflow-x-auto">
+            <button onclick="showTab('signals')" id="tab-signals" class="tab-btn px-6 py-3 bg-blue-600 rounded-lg font-bold">
+                📊 سیگنال‌های لحظه‌ای
+            </button>
+            <button onclick="showTab('history')" id="tab-history" class="tab-btn px-6 py-3 bg-gray-700 rounded-lg font-bold hover:bg-gray-600">
+                📜 تاریخچه و اعتبارسنجی
+            </button>
+            <button onclick="showTab('chart')" id="tab-chart" class="tab-btn px-6 py-3 bg-gray-700 rounded-lg font-bold hover:bg-gray-600">
+                📈 چارت تحلیلی
+            </button>
+            <button onclick="showTab('settings')" id="tab-settings" class="tab-btn px-6 py-3 bg-gray-700 rounded-lg font-bold hover:bg-gray-600">
+                ⚙️ تنظیمات
+            </button>
+        </div>
+
+        <!-- Signals Tab -->
+        <div id="signals-tab" class="tab-content">
+            <!-- Filters -->
+            <div class="bg-gray-800 rounded-xl p-4 mb-4 flex flex-wrap gap-4 items-center">
+                <input type="text" id="searchCoin" placeholder="🔍 جستجوی ارز..." 
+                    class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 w-48">
+                
+                <select id="signalTypeFilter" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+                    <option value="all">همه سیگنال‌ها</option>
+                    <option value="pump">🚀 فقط پامپ</option>
+                    <option value="dump">📉 فقط دامپ</option>
+                    <option value="buy">💚 خرید</option>
+                    <option value="sell">❤️ فروش</option>
+                </select>
+                
+                <select id="strengthFilter" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+                    <option value="0">همه قدرت‌ها</option>
+                    <option value="70">قدرت بالای 70%</option>
+                    <option value="80">قدرت بالای 80%</option>
+                    <option value="90">قدرت بالای 90%</option>
+                </select>
+                
+                <button onclick="refreshData()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg flex items-center gap-2">
+                    🔄 بروزرسانی
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingSignals" class="flex flex-col items-center justify-center py-20">
+                <div class="loader mb-4"></div>
+                <p class="text-gray-400">در حال دریافت اطلاعات از صرافی...</p>
+            </div>
+
+            <!-- Signals Grid -->
+            <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 hidden">
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content hidden">
+            <div class="bg-gray-800 rounded-xl p-4 mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">📊 تاریخچه سیگنال‌ها و اعتبارسنجی</h2>
+                    <div class="flex gap-2">
+                        <button onclick="exportHistory()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
+                            📥 خروجی CSV
+                        </button>
+                        <button onclick="clearHistory()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg">
+                            🗑️ پاک کردن
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold text-blue-400" id="totalSignals">0</div>
+                        <div class="text-sm text-gray-400">کل سیگنال‌ها</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold text-green-400" id="successfulSignals">0</div>
+                        <div class="text-sm text-gray-400">سیگنال موفق</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold text-red-400" id="failedSignals">0</div>
+                        <div class="text-sm text-gray-400">سیگنال ناموفق</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold text-yellow-400" id="pendingSignals">0</div>
+                        <div class="text-sm text-gray-400">در انتظار بررسی</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Table -->
+            <div class="bg-gray-800 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="p-3 text-right">زمان</th>
+                                <th class="p-3 text-right">ارز</th>
+                                <th class="p-3 text-right">نوع</th>
+                                <th class="p-3 text-right">قیمت ورود</th>
+                                <th class="p-3 text-right">قیمت فعلی</th>
+                                <th class="p-3 text-right">تغییر</th>
+                                <th class="p-3 text-right">قدرت</th>
+                                <th class="p-3 text-right">وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Tab -->
+        <div id="chart-tab" class="tab-content hidden">
+            <div class="bg-gray-800 rounded-xl p-4 mb-4">
+                <div class="flex flex-wrap gap-4 items-center mb-4">
+                    <select id="chartSymbol" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+                        <option value="">انتخاب ارز...</option>
+                    </select>
+                    
+                    <select id="chartTimeframe" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+                        <option value="1m">1 دقیقه</option>
+                        <option value="5m" selected>5 دقیقه</option>
+                        <option value="15m">15 دقیقه</option>
+                        <option value="1h">1 ساعت</option>
+                        <option value="4h">4 ساعت</option>
+                    </select>
+                    
+                    <div class="flex gap-2">
+                        <label class="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg cursor-pointer">
+                            <input type="checkbox" id="showMA" checked class="accent-blue-500">
+                            <span>MA</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg cursor-pointer">
+                            <input type="checkbox" id="showEMA" checked class="accent-green-500">
+                            <span>EMA</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg cursor-pointer">
+                            <input type="checkbox" id="showBB" class="accent-purple-500">
+                            <span>BB</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg cursor-pointer">
+                            <input type="checkbox" id="showUTBot" class="accent-yellow-500">
+                            <span>UT Bot</span>
+                        </label>
+                    </div>
+                    
+                    <button onclick="loadChart()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg">
+                        📊 نمایش چارت
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Price Chart -->
+            <div class="bg-gray-800 rounded-xl p-4 mb-4">
+                <h3 class="text-lg font-bold mb-4">📈 چارت قیمت</h3>
+                <div class="h-96">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Indicators -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-800 rounded-xl p-4">
+                    <h3 class="text-lg font-bold mb-4">RSI</h3>
+                    <div class="h-48">
+                        <canvas id="rsiChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-4">
+                    <h3 class="text-lg font-bold mb-4">MACD</h3>
+                    <div class="h-48">
+                        <canvas id="macdChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Indicator Values -->
+            <div class="bg-gray-800 rounded-xl p-4 mt-4">
+                <h3 class="text-lg font-bold mb-4">📊 مقادیر اندیکاتورها</h3>
+                <div id="indicatorValues" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content hidden">
+            <div class="bg-gray-800 rounded-xl p-6">
+                <h2 class="text-xl font-bold mb-6">⚙️ تنظیمات سیستم</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-400 mb-2">حداقل قدرت سیگنال (%)</label>
+                        <input type="range" id="minStrength" min="50" max="95" value="70" 
+                            class="w-full" oninput="document.getElementById('minStrengthVal').textContent = this.value">
+                        <span id="minStrengthVal" class="text-blue-400">70</span>%
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 mb-2">حداقل تغییر قیمت برای پامپ (%)</label>
+                        <input type="range" id="pumpThreshold" min="2" max="15" value="5" 
+                            class="w-full" oninput="document.getElementById('pumpThresholdVal').textContent = this.value">
+                        <span id="pumpThresholdVal" class="text-green-400">5</span>%
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 mb-2">فاصله بروزرسانی (ثانیه)</label>
+                        <select id="refreshInterval" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 w-full">
+                            <option value="30">30 ثانیه</option>
+                            <option value="60">1 دقیقه</option>
+                            <option value="180" selected>3 دقیقه</option>
+                            <option value="300">5 دقیقه</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 mb-2">تایم‌فریم تحلیل</label>
+                        <select id="analysisTimeframe" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 w-full">
+                            <option value="5m" selected>5 دقیقه</option>
+                            <option value="15m">15 دقیقه</option>
+                            <option value="1h">1 ساعت</option>
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-400 mb-2">اندیکاتورهای فعال</label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked id="ind-ma" class="accent-blue-500">
+                                <span>MA (20,50)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked id="ind-ema" class="accent-green-500">
+                                <span>EMA (9,21)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked id="ind-rsi" class="accent-purple-500">
+                                <span>RSI (14)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked id="ind-macd" class="accent-yellow-500">
+                                <span>MACD</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked id="ind-bb" class="accent-pink-500">
+                                <span>Bollinger Bands</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked id="ind-atr" class="accent-orange-500">
+                                <span>ATR</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex gap-4">
+                    <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold">
+                        💾 ذخیره تنظیمات
+                    </button>
+                    <button onclick="resetSettings()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-bold">
+                        🔄 بازنشانی
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Signal Detail Modal -->
+    <div id="signalModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 id="modalTitle" class="text-2xl font-bold"></h2>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+                <div id="modalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Configuration =====
+        const CONFIG = {
+            exchanges: {
+                kucoin: {
+                    name: 'KuCoin',
+                    futuresUrl: 'https://api-futures.kucoin.com',
+                    wsUrl: 'wss://ws-api-futures.kucoin.com',
+                    tickerEndpoint: '/api/v1/contracts/active'
+                },
+                bybit: {
+                    name: 'Bybit',
+                    futuresUrl: 'https://api.bybit.com',
+                    tickerEndpoint: '/v5/market/tickers?category=linear'
+                },
+                okx: {
+                    name: 'OKX',
+                    futuresUrl: 'https://www.okx.com',
+                    tickerEndpoint: '/api/v5/market/tickers?instType=SWAP'
+                },
+                mexc: {
+                    name: 'MEXC',
+                    futuresUrl: 'https://contract.mexc.com',
+                    tickerEndpoint: '/api/v1/contract/ticker'
+                }
+            },
+            refreshInterval: 180000, // 3 minutes
+            maxCoins: 250
+        };
+
+        // ===== State =====
+        let state = {
+            currentExchange: 'kucoin',
+            coins: [],
+            signals: [],
+            history: JSON.parse(localStorage.getItem('signalHistory') || '[]'),
+            settings: JSON.parse(localStorage.getItem('settings') || '{}'),
+            charts: {},
+            priceData: {}
+        };
+
+        // ===== Indicators Library =====
+        const Indicators = {
+            SMA: (data, period) => {
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) {
+                        result.push(null);
+                    } else {
+                        const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                        result.push(sum / period);
+                    }
+                }
+                return result;
+            },
+
+            EMA: (data, period) => {
+                const result = [];
+                const multiplier = 2 / (period + 1);
+                let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) {
+                        result.push(null);
+                    } else if (i === period - 1) {
+                        result.push(ema);
+                    } else {
+                        ema = (data[i] - ema) * multiplier + ema;
+                        result.push(ema);
+                    }
+                }
+                return result;
+            },
+
+            RSI: (data, period = 14) => {
+                const result = [];
+                const gains = [];
+                const losses = [];
+                
+                for (let i = 1; i < data.length; i++) {
+                    const change = data[i] - data[i - 1];
+                    gains.push(change > 0 ? change : 0);
+                    losses.push(change < 0 ? -change : 0);
+                }
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period) {
+                        result.push(null);
+                    } else {
+                        const avgGain = gains.slice(i - period, i).reduce((a, b) => a + b, 0) / period;
+                        const avgLoss = losses.slice(i - period, i).reduce((a, b) => a + b, 0) / period;
+                        const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+                        result.push(100 - (100 / (1 + rs)));
+                    }
+                }
+                return result;
+            },
+
+            MACD: (data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) => {
+                const fastEMA = Indicators.EMA(data, fastPeriod);
+                const slowEMA = Indicators.EMA(data, slowPeriod);
+                const macdLine = fastEMA.map((f, i) => f && slowEMA[i] ? f - slowEMA[i] : null);
+                const signalLine = Indicators.EMA(macdLine.filter(x => x !== null), signalPeriod);
+                
+                let signalIdx = 0;
+                const signal = macdLine.map(m => {
+                    if (m === null) return null;
+                    return signalLine[signalIdx++] || null;
+                });
+                
+                const histogram = macdLine.map((m, i) => m && signal[i] ? m - signal[i] : null);
+                
+                return { macdLine, signalLine: signal, histogram };
+            },
+
+            BollingerBands: (data, period = 20, stdDev = 2) => {
+                const sma = Indicators.SMA(data, period);
+                const upper = [];
+                const lower = [];
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) {
+                        upper.push(null);
+                        lower.push(null);
+                    } else {
+                        const slice = data.slice(i - period + 1, i + 1);
+                        const mean = sma[i];
+                        const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period;
+                        const std = Math.sqrt(variance);
+                        upper.push(mean + stdDev * std);
+                        lower.push(mean - stdDev * std);
+                    }
+                }
+                
+                return { middle: sma, upper, lower };
+            },
+
+            ATR: (high, low, close, period = 14) => {
+                const tr = [];
+                for (let i = 0; i < high.length; i++) {
+                    if (i === 0) {
+                        tr.push(high[i] - low[i]);
+                    } else {
+                        const hl = high[i] - low[i];
+                        const hc = Math.abs(high[i] - close[i - 1]);
+                        const lc = Math.abs(low[i] - close[i - 1]);
+                        tr.push(Math.max(hl, hc, lc));
+                    }
+                }
+                return Indicators.SMA(tr, period);
+            },
+
+            UTBotAlert: (close, high, low, atrPeriod = 10, sensitivity = 1) => {
+                const atr = Indicators.ATR(high, low, close, atrPeriod);
+                const signals = [];
+                let prevTrailingStop = close[0];
+                let trend = 1;
+                
+                for (let i = 0; i < close.length; i++) {
+                    if (atr[i] === null) {
+                        signals.push({ signal: null, stop: null });
+                        continue;
+                    }
+                    
+                    const nLoss = atr[i] * sensitivity;
+                    let trailingStop;
+                    
+                    if (close[i] > prevTrailingStop) {
+                        trailingStop = Math.max(prevTrailingStop, close[i] - nLoss);
+                    } else {
+                        trailingStop = Math.min(prevTrailingStop, close[i] + nLoss);
+                    }
+                    
+                    let signal = null;
+                    if (close[i] > trailingStop && close[i - 1] <= prevTrailingStop) {
+                        signal = 'BUY';
+                        trend = 1;
+                    } else if (close[i] < trailingStop && close[i - 1] >= prevTrailingStop) {
+                        signal = 'SELL';
+                        trend = -1;
+                    }
+                    
+                    signals.push({ signal, stop: trailingStop, trend });
+                    prevTrailingStop = trailingStop;
+                }
+                
+                return signals;
+            }
+        };
+
+        // ===== Signal Detection =====
+        const SignalDetector = {
+            detectPumpDump: (candles, symbol) => {
+                if (candles.length < 20) return [];
+                
+                const signals = [];
+                const closes = candles.map(c => c.close);
+                const volumes = candles.map(c => c.volume);
+                const threshold = parseFloat(document.getElementById('pumpThreshold')?.value || 5);
+                
+                // Check last 15 candles
+                const recent = candles.slice(-15);
+                const startPrice = recent[0].close;
+                const endPrice = recent[recent.length - 1].close;
+                const priceChange = ((endPrice - startPrice) / startPrice) * 100;
+                
+                const avgVolume = volumes.slice(0, -15).reduce((a, b) => a + b, 0) / (volumes.length - 15);
+                const recentVolume = volumes.slice(-15).reduce((a, b) => a + b, 0) / 15;
+                const volumeRatio = recentVolume / avgVolume;
+                
+                if (priceChange >= threshold && volumeRatio > 1.5) {
+                    signals.push({
+                        symbol,
+                        type: 'PUMP',
+                        signal: 'BUY',
+                        strength: Math.min(70 + priceChange * 2, 98),
+                        priceChange: priceChange.toFixed(2),
+                        volumeRatio: volumeRatio.toFixed(2),
+                        reason: `🚀 پامپ شناسایی شد! +${priceChange.toFixed(1)}%`,
+                        price: endPrice,
+                        timestamp: new Date()
+                    });
+                } else if (priceChange <= -threshold && volumeRatio > 1.5) {
+                    signals.push({
+                        symbol,
+                        type: 'DUMP',
+                        signal: 'SELL',
+                        strength: Math.min(70 + Math.abs(priceChange) * 2, 98),
+                        priceChange: priceChange.toFixed(2),
+                        volumeRatio: volumeRatio.toFixed(2),
+                        reason: `📉 دامپ شناسایی شد! ${priceChange.toFixed(1)}%`,
+                        price: endPrice,
+                        timestamp: new Date()
+                    });
+                }
+                
+                return signals;
+            },
+
+            detectMACross: (candles, symbol) => {
+                if (candles.length < 50) return [];
+                
+                const signals = [];
+                const closes = candles.map(c => c.close);
+                const ma20 = Indicators.SMA(closes, 20);
+                const ma50 = Indicators.SMA(closes, 50);
+                const ema9 = Indicators.EMA(closes, 9);
+                const ema21 = Indicators.EMA(closes, 21);
+                
+                const last = closes.length - 1;
+                
+                // MA Cross
+                if (ma20[last] && ma50[last] && ma20[last - 1] && ma50[last - 1]) {
+                    if (ma20[last] > ma50[last] && ma20[last - 1] <= ma50[last - 1]) {
+                        signals.push({
+                            symbol,
+                            type: 'MA_CROSS_UP',
+                            signal: 'BUY',
+                            strength: 75,
+                            reason: '📈 تقاطع MA20/50 صعودی',
+                            price: closes[last],
+                            timestamp: new Date()
+                        });
+                    } else if (ma20[last] < ma50[last] && ma20[last - 1] >= ma50[last - 1]) {
+                        signals.push({
+                            symbol,
+                            type: 'MA_CROSS_DOWN',
+                            signal: 'SELL',
+                            strength: 75,
+                            reason: '📉 تقاطع MA20/50 نزولی',
+                            price: closes[last],
+                            timestamp: new Date()
+                        });
+                    }
+                }
+                
+                // EMA Cross
+                if (ema9[last] && ema21[last] && ema9[last - 1] && ema21[last - 1]) {
+                    if (ema9[last] > ema21[last] && ema9[last - 1] <= ema21[last - 1]) {
+                        signals.push({
+                            symbol,
+                            type: 'EMA_CROSS_UP',
+                            signal: 'BUY',
+                            strength: 80,
+                            reason: '📈 تقاطع EMA9/21 صعودی',
+                            price: closes[last],
+                            timestamp: new Date()
+                        });
+                    } else if (ema9[last] < ema21[last] && ema9[last - 1] >= ema21[last - 1]) {
+                        signals.push({
+                            symbol,
+                            type: 'EMA_CROSS_DOWN',
+                            signal: 'SELL',
+                            strength: 80,
+                            reason: '📉 تقاطع EMA9/21 نزولی',
+                            price: closes[last],
+                            timestamp: new Date()
+                        });
+                    }
+                }
+                
+                return signals;
+            },
+
+            detectRSISignals: (candles, symbol) => {
+                if (candles.length < 20) return [];
+                
+                const signals = [];
+                const closes = candles.map(c => c.close);
+                const rsi = Indicators.RSI(closes);
+                const last = rsi.length - 1;
+                
+                if (rsi[last] !== null) {
+                    if (rsi[last] < 30 && rsi[last - 1] >= 30) {
+                        signals.push({
+                            symbol,
+                            type: 'RSI_OVERSOLD',
+                            signal: 'BUY',
+                            strength: 70,
+                            reason: `📊 RSI اشباع فروش (${rsi[last].toFixed(1)})`,
+                            price: closes[last],
+                            rsi: rsi[last],
+                            timestamp: new Date()
+                        });
+                    } else if (rsi[last] > 70 && rsi[last - 1] <= 70) {
+                        signals.push({
+                            symbol,
+                            type: 'RSI_OVERBOUGHT',
+                            signal: 'SELL',
+                            strength: 70,
+                            reason: `📊 RSI اشباع خرید (${rsi[last].toFixed(1)})`,
+                            price: closes[last],
+                            rsi: rsi[last],
+                            timestamp: new Date()
+                        });
+                    }
+                }
+                
+                return signals;
+            },
+
+            detectUTBotSignals: (candles, symbol) => {
+                if (candles.length < 20) return [];
+                
+                const signals = [];
+                const closes = candles.map(c => c.close);
+                const highs = candles.map(c => c.high);
+                const lows = candles.map(c => c.low);
+                
+                const utbot = Indicators.UTBotAlert(closes, highs, lows);
+                const last = utbot.length - 1;
+                
+                if (utbot[last].signal === 'BUY') {
+                    signals.push({
+                        symbol,
+                        type: 'UTBOT_BUY',
+                        signal: 'BUY',
+                        strength: 85,
+                        reason: '🎯 UT Bot Alert - سیگنال خرید',
+                        price: closes[last],
+                        stopLoss: utbot[last].stop,
+                        timestamp: new Date()
+                    });
+                } else if (utbot[last].signal === 'SELL') {
+                    signals.push({
+                        symbol,
+                        type: 'UTBOT_SELL',
+                        signal: 'SELL',
+                        strength: 85,
+                        reason: '🎯 UT Bot Alert - سیگنال فروش',
+                        price: closes[last],
+                        stopLoss: utbot[last].stop,
+                        timestamp: new Date()
+                    });
+                }
+                
+                return signals;
+            },
+
+            detectWhaleActivity: (candles, symbol) => {
+                if (candles.length < 60) return [];
+                
+                const signals = [];
+                const volumes = candles.map(c => c.volume);
+                const closes = candles.map(c => c.close);
+                
+                const avgVol = volumes.slice(0, -10).reduce((a, b) => a + b, 0) / (volumes.length - 10);
+                const stdVol = Math.sqrt(volumes.slice(0, -10).reduce((sum, v) => sum + Math.pow(v - avgVol, 2), 0) / (volumes.length - 10));
+                
+                const lastVol = volumes[volumes.length - 1];
+                const zScore = (lastVol - avgVol) / stdVol;
+                
+                if (zScore > 2.5) {
+                    const priceChange = closes[closes.length - 1] - closes[closes.length - 2];
+                    
+                    if (priceChange > 0) {
+                        signals.push({
+                            symbol,
+                            type: 'WHALE_BUY',
+                            signal: 'BUY',
+                            strength: Math.min(65 + zScore * 8, 95),
+                            reason: `🐋 ورود نهنگ! (Vol Z: ${zScore.toFixed(1)})`,
+                            price: closes[closes.length - 1],
+                            volumeZScore: zScore.toFixed(2),
+                            timestamp: new Date()
+                        });
+                    } else {
+                        signals.push({
+                            symbol,
+                            type: 'WHALE_SELL',
+                            signal: 'SELL',
+                            strength: Math.min(65 + zScore * 8, 95),
+                            reason: `🐋 خروج نهنگ! (Vol Z: ${zScore.toFixed(1)})`,
+                            price: closes[closes.length - 1],
+                            volumeZScore: zScore.toFixed(2),
+                            timestamp: new Date()
+                        });
+                    }
+                }
+                
+                return signals;
+            },
+
+            analyzeAll: (candles, symbol) => {
+                let allSignals = [];
+                
+                allSignals = allSignals.concat(SignalDetector.detectPumpDump(candles, symbol));
+                allSignals = allSignals.concat(SignalDetector.detectMACross(candles, symbol));
+                allSignals = allSignals.concat(SignalDetector.detectRSISignals(candles, symbol));
+                allSignals = allSignals.concat(SignalDetector.detectUTBotSignals(candles, symbol));
+                allSignals = allSignals.concat(SignalDetector.detectWhaleActivity(candles, symbol));
+                
+                return allSignals;
+            }
+        };
+
+        // ===== API Functions =====
+        async function fetchFromAPI(url) {
+            try {
+                // Using CORS proxy for browser
+                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                const response = await fetch(proxyUrl);
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                return null;
+            }
+        }
+
+        async function getKucoinSymbols() {
+            try {
+                const data = await fetchFromAPI('https://api-futures.kucoin.com/api/v1/contracts/active');
+                if (data && data.data) {
+                    return data.data.slice(0, CONFIG.maxCoins).map(item => ({
+                        symbol: item.symbol,
+                        baseCurrency: item.baseCurrency,
+                        price: item.lastTradePrice,
+                        volume24h: item.volumeOf24h,
+                        priceChange: item.priceChgPct * 100
+                    }));
+                }
+            } catch (error) {
+                console.error('KuCoin Error:', error);
+            }
+            return generateMockData();
+        }
+
+        async function getBybitSymbols() {
+            try {
+                const data = await fetchFromAPI('https://api.bybit.com/v5/market/tickers?category=linear');
+                if (data && data.result && data.result.list) {
+                    return data.result.list.slice(0, CONFIG.maxCoins).map(item => ({
+                        symbol: item.symbol,
+                        baseCurrency: item.symbol.replace('USDT', ''),
+                        price: parseFloat(item.lastPrice),
+                        volume24h: parseFloat(item.volume24h),
+                        priceChange: parseFloat(item.price24hPcnt) * 100
+                    }));
+                }
+            } catch (error) {
+                console.error('Bybit Error:', error);
+            }
+            return generateMockData();
+        }
+
+        function generateMockData() {
+            // Mock data for demonstration
+            const coins = ['BTC', 'ETH', 'BNB', 'XRP', 'ADA', 'DOGE', 'SOL', 'DOT', 'MATIC', 'SHIB',
+                'AVAX', 'LINK', 'UNI', 'ATOM', 'LTC', 'ETC', 'XLM', 'NEAR', 'APT', 'ARB',
+                'OP', 'FIL', 'AAVE', 'MKR', 'GRT', 'SNX', 'CRV', 'LDO', 'RPL', 'IMX',
+                'SAND', 'MANA', 'AXS', 'ENJ', 'GALA', 'FLOW', 'THETA', 'EGLD', 'FTM', 'HBAR',
+                'VET', 'ALGO', 'XTZ', 'EOS', 'ASTR', 'KCS', 'RUNE', 'ZIL', 'ENS', 'CAKE'];
+            
+            return coins.slice(0, 50).map(coin => ({
+                symbol: coin + 'USDT',
+                baseCurrency: coin,
+                price: Math.random() * 50000 + 0.01,
+                volume24h: Math.random() * 1000000000,
+                priceChange: (Math.random() - 0.5) * 20
+            }));
+        }
+
+        function generateMockCandles(symbol, count = 100) {
+            const candles = [];
+            let price = Math.random() * 1000 + 10;
+            const now = Date.now();
+            
+            for (let i = count; i > 0; i--) {
+                const change = (Math.random() - 0.5) * price * 0.02;
+                const open = price;
+                price += change;
+                const close = price;
+                const high = Math.max(open, close) * (1 + Math.random() * 0.01);
+                const low = Math.min(open, close) * (1 - Math.random() * 0.01);
+                const volume = Math.random() * 1000000;
+                
+                candles.push({
+                    timestamp: now - i * 5 * 60 * 1000,
+                    open, high, low, close, volume
+                });
+            }
+            
+            // Add some pump/dump scenarios randomly
+            if (Math.random() > 0.7) {
+                const pumpStart = Math.floor(candles.length * 0.8);
+                for (let i = pumpStart; i < candles.length; i++) {
+                    candles[i].close *= 1.01;
+                    candles[i].high = candles[i].close * 1.005;
+                    candles[i].volume *= 2;
+                }
+            }
+            
+            return candles;
+        }
+
+        // ===== UI Functions =====
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600');
+                btn.classList.add('bg-gray-700');
+            });
+            
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.remove('bg-gray-700');
+            document.getElementById('tab-' + tabName).classList.add('bg-blue-600');
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.innerHTML = `<div class="w-3 h-3 rounded-full bg-green-500"></div><span>متصل به ${CONFIG.exchanges[state.currentExchange].name}</span>`;
+            } else {
+                status.innerHTML = `<div class="w-3 h-3 rounded-full bg-red-500"></div><span>قطع اتصال</span>`;
+            }
+        }
+
+        function renderSignals() {
+            const grid = document.getElementById('signalsGrid');
+            const loading = document.getElementById('loadingSignals');
+            
+            loading.classList.add('hidden');
+            grid.classList.remove('hidden');
+            
+            const searchTerm = document.getElementById('searchCoin').value.toLowerCase();
+            const typeFilter = document.getElementById('signalTypeFilter').value;
+            const strengthFilter = parseInt(document.getElementById('strengthFilter').value);
+            
+            let filteredSignals = state.signals.filter(sig => {
+                if (searchTerm && !sig.symbol.toLowerCase().includes(searchTerm)) return false;
+                if (strengthFilter && sig.strength < strengthFilter) return false;
+                if (typeFilter === 'pump' && sig.type !== 'PUMP') return false;
+                if (typeFilter === 'dump' && sig.type !== 'DUMP') return false;
+                if (typeFilter === 'buy' && sig.signal !== 'BUY') return false;
+                if (typeFilter === 'sell' && sig.signal !== 'SELL') return false;
+                return true;
+            });
+            
+            // Sort by strength
+            filteredSignals.sort((a, b) => b.strength - a.strength);
+            
+            grid.innerHTML = filteredSignals.map(sig => `
+                <div class="signal-card bg-gray-800 rounded-xl p-4 border-2 ${sig.signal === 'BUY' ? 'border-green-500 pump' : 'border-red-500 dump'}" 
+                     onclick="showSignalDetail('${sig.symbol}')">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-xl font-bold">${sig.symbol}</h3>
+                            <span class="text-sm text-gray-400">${sig.type}</span>
+                        </div>
+                        <span class="text-3xl">${sig.signal === 'BUY' ? '🚀' : '📉'}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>قدرت سیگنال</span>
+                            <span class="${sig.strength >= 80 ? 'text-green-400' : 'text-yellow-400'}">${sig.strength.toFixed(0)}%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="h-2 rounded-full ${sig.signal === 'BUY' ? 'bg-green-500' : 'bg-red-500'}" 
+                                 style="width: ${sig.strength}%"></div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-sm text-gray-300 mb-2">${sig.reason}</p>
+                    
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">قیمت:</span>
+                        <span class="font-mono">$${formatPrice(sig.price)}</span>
+                    </div>
+                    
+                    ${sig.priceChange ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">تغییر:</span>
+                            <span class="${parseFloat(sig.priceChange) >= 0 ? 'text-green-400' : 'text-red-400'}">
+                                ${sig.priceChange}%
+                            </span>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="mt-3 flex gap-2">
+                        <span class="px-2 py-1 rounded text-xs ${sig.signal === 'BUY' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                            ${sig.signal === 'BUY' ? '💚 LONG' : '❤️ SHORT'}
+                        </span>
+                        <span class="px-2 py-1 rounded text-xs bg-gray-700">
+                            ${formatTime(sig.timestamp)}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update stats
+            document.getElementById('activeCoins').textContent = state.coins.length;
+            document.getElementById('todaySignals').textContent = state.signals.length;
+            document.getElementById('pumpCount').textContent = state.signals.filter(s => s.type === 'PUMP' || s.signal === 'BUY').length;
+            document.getElementById('dumpCount').textContent = state.signals.filter(s => s.type === 'DUMP' || s.signal === 'SELL').length;
+        }
+
+        function showSignalDetail(symbol) {
+            const signal = state.signals.find(s => s.symbol === symbol);
+            if (!signal) return;
+            
+            document.getElementById('modalTitle').textContent = `${signal.symbol} - جزئیات سیگنال`;
+            document.getElementById('modalContent').innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 p-4 rounded-lg ${signal.signal === 'BUY' ? 'bg-green-900/30' : 'bg-red-900/30'}">
+                        <span class="text-5xl">${signal.signal === 'BUY' ? '🚀' : '📉'}</span>
+                        <div>
+                            <div class="text-2xl font-bold">${signal.signal === 'BUY' ? 'سیگنال خرید (LONG)' : 'سیگنال فروش (SHORT)'}</div>
+                            <div class="text-gray-400">${signal.type}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <div class="text-gray-400 text-sm">قیمت ورود</div>
+                            <div class="text-xl font-mono">$${formatPrice(signal.price)}</div>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <div class="text-gray-400 text-sm">قدرت سیگنال</div>
+                            <div class="text-xl font-bold ${signal.strength >= 80 ? 'text-green-400' : 'text-yellow-400'}">${signal.strength.toFixed(0)}%</div>
+                        </div>
+                        ${signal.stopLoss ? `
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="text-gray-400 text-sm">حد ضرر</div>
+                                <div class="text-xl font-mono text-red-400">$${formatPrice(signal.stopLoss)}</div>
+                            </div>
+                        ` : ''}
+                        ${signal.rsi ? `
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="text-gray-400 text-sm">RSI</div>
+                                <div class="text-xl font-mono">${signal.rsi.toFixed(1)}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <div class="text-gray-400 text-sm mb-2">دلیل سیگنال</div>
+                        <div class="text-lg">${signal.reason}</div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="saveSignalToHistory('${symbol}')" class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold">
+                            💾 ذخیره در تاریخچه
+                        </button>
+                        <button onclick="openChart('${symbol}')" class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-bold">
+                            📊 نمایش چارت
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('signalModal').classList.remove('hidden');
+            document.getElementById('signalModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('signalModal').classList.add('hidden');
+            document.getElementById('signalModal').classList.remove('flex');
+        }
+
+        function saveSignalToHistory(symbol) {
+            const signal = state.signals.find(s => s.symbol === symbol);
+            if (!signal) return;
+            
+            const historyItem = {
+                ...signal,
+                id: Date.now(),
+                entryPrice: signal.price,
+                currentPrice: signal.price,
+                status: 'pending',
+                savedAt: new Date().toISOString()
+            };
+            
+            state.history.unshift(historyItem);
+            localStorage.setItem('signalHistory', JSON.stringify(state.history));
+            
+            alert('✅ سیگنال در تاریخچه ذخیره شد!');
+            closeModal();
+            updateHistoryTable();
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('historyTable');
+            
+            // Calculate stats
+            const total = state.history.length;
+            const successful = state.history.filter(h => h.status === 'success').length;
+            const failed = state.history.filter(h => h.status === 'failed').length;
+            const pending = state.history.filter(h => h.status === 'pending').length;
+            
+            document.getElementById('totalSignals').textContent = total;
+            document.getElementById('successfulSignals').textContent = successful;
+            document.getElementById('failedSignals').textContent = failed;
+            document.getElementById('pendingSignals').textContent = pending;
+            
+            if (total > 0) {
+                document.getElementById('accuracy').textContent = ((successful / (successful + failed)) * 100 || 0).toFixed(1) + '%';
+            }
+            
+            tbody.innerHTML = state.history.map(item => {
+                const priceChange = item.currentPrice ? ((item.currentPrice - item.entryPrice) / item.entryPrice * 100) : 0;
+                const isProfit = (item.signal === 'BUY' && priceChange > 0) || (item.signal === 'SELL' && priceChange < 0);
+                
+                return `
+                    <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+                        <td class="p-3">${formatDateTime(item.savedAt)}</td>
+                        <td class="p-3 font-bold">${item.symbol}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded text-xs ${item.signal === 'BUY' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                                ${item.signal}
+                            </span>
+                        </td>
+                        <td class="p-3 font-mono">$${formatPrice(item.entryPrice)}</td>
+                        <td class="p-3 font-mono">$${formatPrice(item.currentPrice || item.entryPrice)}</td>
+                        <td class="p-3 ${isProfit ? 'text-green-400' : 'text-red-400'}">
+                            ${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%
+                        </td>
+                        <td class="p-3">${item.strength.toFixed(0)}%</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded text-xs ${
+                                item.status === 'success' ? 'bg-green-900 text-green-300' :
+                                item.status === 'failed' ? 'bg-red-900 text-red-300' :
+                                'bg-yellow-900 text-yellow-300'
+                            }">
+                                ${item.status === 'success' ? '✅ موفق' : item.status === 'failed' ? '❌ ناموفق' : '⏳ در انتظار'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function validateSignals() {
+            // Validate pending signals every 3 minutes
+            for (let item of state.history) {
+                if (item.status === 'pending') {
+                    // Simulate price update
+                    const priceChange = (Math.random() - 0.5) * 0.1; // ±5%
+                    item.currentPrice = item.entryPrice * (1 + priceChange);
+                    
+                    const change = ((item.currentPrice - item.entryPrice) / item.entryPrice) * 100;
+                    
+                    // Check if signal hit target or stop loss
+                    if (item.signal === 'BUY') {
+                        if (change >= 3) item.status = 'success';
+                        else if (change <= -2) item.status = 'failed';
+                    } else {
+                        if (change <= -3) item.status = 'success';
+                        else if (change >= 2) item.status = 'failed';
+                    }
+                }
+            }
+            
+            localStorage.setItem('signalHistory', JSON.stringify(state.history));
+            updateHistoryTable();
+        }
+
+        function openChart(symbol) {
+            closeModal();
+            showTab('chart');
+            document.getElementById('chartSymbol').value = symbol;
+            loadChart();
+        }
+
+        async function loadChart() {
+            const symbol = document.getElementById('chartSymbol').value;
+            if (!symbol) return;
+            
+            const candles = generateMockCandles(symbol, 100);
+            state.priceData[symbol] = candles;
+            
+            const closes = candles.map(c => c.close);
+            const labels = candles.map(c => formatTime(c.timestamp));
+            
+            // Calculate indicators
+            const ma20 = Indicators.SMA(closes, 20);
+            const ma50 = Indicators.SMA(closes, 50);
+            const ema9 = Indicators.EMA(closes, 9);
+            const ema21 = Indicators.EMA(closes, 21);
+            const bb = Indicators.BollingerBands(closes, 20, 2);
+            const rsi = Indicators.RSI(closes);
+            const macd = Indicators.MACD(closes);
+            const utbot = Indicators.UTBotAlert(closes, candles.map(c => c.high), candles.map(c => c.low));
+            
+            // Price Chart
+            if (state.charts.price) state.charts.price.destroy();
+            
+            const datasets = [
+                {
+                    label: 'قیمت',
+                    data: closes,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }
+            ];
+            
+            if (document.getElementById('showMA').checked) {
+                datasets.push({
+                    label: 'MA20',
+                    data: ma20,
+                    borderColor: '#f59e0b',
+                    borderWidth: 1,
+                    pointRadius: 0
+                });
+                datasets.push({
+                    label: 'MA50',
+                    data: ma50,
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    pointRadius: 0
+                });
+            }
+            
+            if (document.getElementById('showEMA').checked) {
+                datasets.push({
+                    label: 'EMA9',
+                    data: ema9,
+                    borderColor: '#22c55e',
+                    borderWidth: 1,
+                    pointRadius: 0
+                });
+                datasets.push({
+                    label: 'EMA21',
+                    data: ema21,
+                    borderColor: '#a855f7',
+                    borderWidth: 1,
+                    pointRadius: 0
+                });
+            }
+            
+            if (document.getElementById('showBB').checked) {
+                datasets.push({
+                    label: 'BB Upper',
+                    data: bb.upper,
+                    borderColor: 'rgba(168, 85, 247, 0.5)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: false
+                });
+                datasets.push({
+                    label: 'BB Lower',
+                    data: bb.lower,
+                    borderColor: 'rgba(168, 85, 247, 0.5)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: '-1',
+                    backgroundColor: 'rgba(168, 85, 247, 0.1)'
+                });
+            }
+            
+            if (document.getElementById('showUTBot').checked) {
+                const utbotStops = utbot.map(u => u.stop);
+                datasets.push({
+                    label: 'UT Bot Stop',
+                    data: utbotStops,
+                    borderColor: '#eab308',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0
+                });
+            }
+            
+            state.charts.price = new Chart(document.getElementById('priceChart'), {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#fff' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+                        y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
+                    }
+                }
+            });
+            
+            // RSI Chart
+            if (state.charts.rsi) state.charts.rsi.destroy();
+            state.charts.rsi = new Chart(document.getElementById('rsiChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'RSI',
+                        data: rsi,
+                        borderColor: '#a855f7',
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+                        y: { 
+                            min: 0, max: 100,
+                            ticks: { color: '#9ca3af' }, 
+                            grid: { color: '#374151' }
+                        }
+                    }
+                }
+            });
+            
+            // MACD Chart
+            if (state.charts.macd) state.charts.macd.destroy();
+            state.charts.macd = new Chart(document.getElementById('macdChart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Histogram',
+                            data: macd.histogram,
+                            backgroundColor: macd.histogram.map(h => h >= 0 ? '#22c55e' : '#ef4444')
+                        },
+                        {
+                            label: 'MACD',
+                            data: macd.macdLine,
+                            type: 'line',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Signal',
+                            data: macd.signalLine,
+                            type: 'line',
+                            borderColor: '#f59e0b',
+                            borderWidth: 1,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+                        y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
+                    }
+                }
+            });
+            
+            // Update indicator values
+            const lastIdx = closes.length - 1;
+            const atr = Indicators.ATR(candles.map(c => c.high), candles.map(c => c.low), closes);
+            
+            document.getElementById('indicatorValues').innerHTML = `
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">MA20</div>
+                    <div class="font-mono text-yellow-400">${ma20[lastIdx]?.toFixed(2) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">MA50</div>
+                    <div class="font-mono text-red-400">${ma50[lastIdx]?.toFixed(2) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">EMA9</div>
+                    <div class="font-mono text-green-400">${ema9[lastIdx]?.toFixed(2) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">EMA21</div>
+                    <div class="font-mono text-purple-400">${ema21[lastIdx]?.toFixed(2) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">RSI</div>
+                    <div class="font-mono ${rsi[lastIdx] > 70 ? 'text-red-400' : rsi[lastIdx] < 30 ? 'text-green-400' : 'text-blue-400'}">
+                        ${rsi[lastIdx]?.toFixed(1) || '-'}
+                    </div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">ATR</div>
+                    <div class="font-mono text-orange-400">${atr[lastIdx]?.toFixed(4) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">BB Upper</div>
+                    <div class="font-mono text-purple-400">${bb.upper[lastIdx]?.toFixed(2) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">BB Lower</div>
+                    <div class="font-mono text-purple-400">${bb.lower[lastIdx]?.toFixed(2) || '-'}</div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">MACD</div>
+                    <div class="font-mono ${macd.macdLine[lastIdx] >= 0 ? 'text-green-400' : 'text-red-400'}">
+                        ${macd.macdLine[lastIdx]?.toFixed(4) || '-'}
+                    </div>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center">
+                    <div class="text-xs text-gray-400">UT Bot</div>
+                    <div class="font-mono ${utbot[lastIdx]?.trend > 0 ? 'text-green-400' : 'text-red-400'}">
+                        ${utbot[lastIdx]?.trend > 0 ? '📈 LONG' : '📉 SHORT'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function exportHistory() {
+            let csv = 'زمان,ارز,نوع,قیمت ورود,قیمت فعلی,تغییر,قدرت,وضعیت\n';
+            
+            state.history.forEach(item => {
+                const change = ((item.currentPrice - item.entryPrice) / item.entryPrice * 100).toFixed(2);
+                csv += `${item.savedAt},${item.symbol},${item.signal},${item.entryPrice},${item.currentPrice || '-'},${change}%,${item.strength}%,${item.status}\n`;
+            });
+            
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `signals_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function clearHistory() {
+            if (confirm('آیا مطمئن هستید؟ تمام تاریخچه حذف خواهد شد.')) {
+                state.history = [];
+                localStorage.removeItem('signalHistory');
+                updateHistoryTable();
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                minStrength: document.getElementById('minStrength').value,
+                pumpThreshold: document.getElementById('pumpThreshold').value,
+                refreshInterval: document.getElementById('refreshInterval').value,
+                analysisTimeframe: document.getElementById('analysisTimeframe').value
+            };
+            
+            localStorage.setItem('settings', JSON.stringify(settings));
+            alert('✅ تنظیمات ذخیره شد!');
+            
+            // Apply new refresh interval
+            CONFIG.refreshInterval = parseInt(settings.refreshInterval) * 1000;
+        }
+
+        function resetSettings() {
+            localStorage.removeItem('settings');
+            location.reload();
+        }
+
+        // ===== Helper Functions =====
+        function formatPrice(price) {
+            if (price >= 1000) return price.toFixed(2);
+            if (price >= 1) return price.toFixed(4);
+            return price.toFixed(6);
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('fa-IR') + ' ' + date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ===== Main Functions =====
+        async function refreshData() {
+            document.getElementById('loadingSignals').classList.remove('hidden');
+            document.getElementById('signalsGrid').classList.add('hidden');
+            
+            try {
+                // Get symbols based on exchange
+                if (state.currentExchange === 'kucoin') {
+                    state.coins = await getKucoinSymbols();
+                } else if (state.currentExchange === 'bybit') {
+                    state.coins = await getBybitSymbols();
+                } else {
+                    state.coins = generateMockData();
+                }
+                
+                updateConnectionStatus(true);
+                
+                // Update chart symbol selector
+                const chartSymbol = document.getElementById('chartSymbol');
+                chartSymbol.innerHTML = '<option value="">انتخاب ارز...</option>' + 
+                    state.coins.map(c => `<option value="${c.symbol}">${c.symbol}</option>`).join('');
+                
+                // Generate signals
+                state.signals = [];
+                
+                for (const coin of state.coins.slice(0, 50)) {
+                    const candles = generateMockCandles(coin.symbol);
+                    const signals = SignalDetector.analyzeAll(candles, coin.symbol);
+                    state.signals = state.signals.concat(signals);
+                }
+                
+                // Filter by minimum strength
+                const minStrength = parseInt(document.getElementById('minStrength')?.value || 70);
+                state.signals = state.signals.filter(s => s.strength >= minStrength);
+                
+                renderSignals();
+                
+                document.getElementById('lastUpdate').textContent = formatTime(new Date());
+                
+            } catch (error) {
+                console.error('Error:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // ===== Initialization =====
+        async function init() {
+            // Load settings
+            if (state.settings.minStrength) {
+                document.getElementById('minStrength').value = state.settings.minStrength;
+                document.getElementById('minStrengthVal').textContent = state.settings.minStrength;
+            }
+            if (state.settings.pumpThreshold) {
+                document.getElementById('pumpThreshold').value = state.settings.pumpThreshold;
+                document.getElementById('pumpThresholdVal').textContent = state.settings.pumpThreshold;
+            }
+            
+            // Exchange selector
+            document.getElementById('exchangeSelect').addEventListener('change', (e) => {
+                state.currentExchange = e.target.value;
+                refreshData();
+            });
+            
+            // Search and filters
+            document.getElementById('searchCoin').addEventListener('input', renderSignals);
+            document.getElementById('signalTypeFilter').addEventListener('change', renderSignals);
+            document.getElementById('strengthFilter').addEventListener('change', renderSignals);
+            
+            // Initial load
+            await refreshData();
+            updateHistoryTable();
+            
+            // Auto refresh
+            setInterval(refreshData, CONFIG.refreshInterval);
+            
+            // Validate signals every 3 minutes
+            setInterval(validateSignals, 180000);
+        }
+
+        // Start
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
