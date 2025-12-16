@@ -3,934 +3,360 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 سیستم معاملات فیوچرز</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>🚀 Crypto Futures Signal System</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: 'Vazirmatn', sans-serif;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 100%);
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
             color: #fff;
             min-height: 100vh;
         }
-        
-        .container { max-width: 1800px; margin: 0 auto; padding: 20px; }
-        
-        /* Header */
         .header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+        .exchange-selector {
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .exchange-selector select {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .card {
             background: rgba(255,255,255,0.05);
-            border-radius: 20px;
-            padding: 20px 30px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-radius: 15px;
+            padding: 20px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
         }
-        
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(90deg, #00ff88, #00bfff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .status { display: flex; gap: 20px; align-items: center; }
-        
-        .status-item {
-            padding: 10px 20px;
-            border-radius: 12px;
-            font-size: 14px;
-        }
-        
-        .status-item.online { background: rgba(0,255,136,0.2); color: #00ff88; }
-        .status-item.offline { background: rgba(255,68,68,0.2); color: #ff4444; }
-        
-        /* Navigation */
-        .nav {
-            margin-bottom: 20px;
+        .card h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
             display: flex;
+            align-items: center;
             gap: 10px;
         }
-        
-        .nav a {
-            color: #fff;
-            text-decoration: none;
-            padding: 12px 25px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
-            transition: all 0.3s;
-        }
-        
-        .nav a:hover { background: rgba(255,255,255,0.2); }
-        .nav a.active { background: linear-gradient(90deg, #667eea, #764ba2); }
-        
-        /* Source Selector */
-        .source-panel {
+        .signal-item {
             background: rgba(255,255,255,0.05);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .source-panel h3 { margin-bottom: 15px; font-size: 16px; }
-        
-        .source-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
-        
-        .source-btn {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid transparent;
-            color: #fff;
-            padding: 10px 20px;
             border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-        
-        .source-btn:hover { background: rgba(255,255,255,0.2); }
-        .source-btn.active { border-color: #00ff88; background: rgba(0,255,136,0.2); }
-        
-        /* Alerts Panel */
-        .alerts-panel {
-            background: linear-gradient(135deg, rgba(255,0,0,0.1), rgba(255,100,0,0.1));
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,100,0,0.3);
-        }
-        
-        .alerts-panel h3 { margin-bottom: 15px; color: #ffa500; }
-        
-        .alerts-scroll {
-            display: flex;
-            gap: 15px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-        }
-        
-        .alert-card {
-            min-width: 250px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 12px;
             padding: 15px;
-            border-right: 4px solid #ff4444;
-            animation: pulse 2s infinite;
-        }
-        
-        .alert-card.pump { border-right-color: #00ff88; }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .alert-card .symbol { font-size: 18px; font-weight: bold; }
-        .alert-card .type { font-size: 24px; margin: 10px 0; }
-        .alert-card .stats { font-size: 13px; color: #888; }
-        
-        /* Main Grid */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 20px;
-        }
-        
-        /* Data Grid */
-        .data-panel {
-            background: rgba(255,255,255,0.05);
-            border-radius: 15px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .data-header {
-            background: rgba(255,255,255,0.1);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .data-controls { display: flex; gap: 10px; }
-        
-        .data-controls input,
-        .data-controls select {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-family: inherit;
-        }
-        
-        .data-body {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        
-        .data-row {
-            display: grid;
-            grid-template-columns: 50px 90px 100px 80px 70px 70px 70px 90px 80px;
-            padding: 12px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            align-items: center;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .data-row:hover { background: rgba(255,255,255,0.05); }
-        .data-row:nth-child(even) { background: rgba(255,255,255,0.02); }
-        .data-row:nth-child(even):hover { background: rgba(255,255,255,0.07); }
-        
-        .data-row.header {
-            background: rgba(255,255,255,0.1);
-            font-weight: bold;
-            font-size: 13px;
-            position: sticky;
-            top: 0;
-            cursor: default;
-        }
-        
-        .positive { color: #00ff88; }
-        .negative { color: #ff4444; }
-        
-        /* Signals Panel */
-        .signals-panel {
-            background: rgba(255,255,255,0.05);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        
-        .signals-panel h3 { margin-bottom: 15px; }
-        
-        .signal-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 12px;
-            border-right: 4px solid #3498db;
+            margin-bottom: 10px;
+            border-right: 4px solid #667eea;
             transition: transform 0.2s;
         }
-        
-        .signal-card:hover { transform: translateX(-5px); }
-        .signal-card.buy { border-right-color: #00ff88; }
-        .signal-card.sell { border-right-color: #ff4444; }
-        
+        .signal-item:hover { transform: translateX(-5px); }
+        .signal-item.buy { border-right-color: #00ff88; }
+        .signal-item.sell { border-right-color: #ff4757; }
         .signal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
-        
-        .signal-symbol { font-weight: bold; font-size: 16px; }
-        
-        .signal-strength {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
+        .symbol { font-weight: bold; font-size: 1.1em; }
+        .strength {
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
         }
-        
+        .strength.high { background: #00ff88; color: #000; }
+        .strength.medium { background: #ffa502; color: #000; }
+        .strength.low { background: #747d8c; }
         .signal-type {
-            font-size: 22px;
-            margin-bottom: 8px;
+            font-size: 0.85em;
+            color: #a4b0be;
+            margin-bottom: 5px;
         }
-        
-        .signal-reason {
-            font-size: 12px;
-            color: #888;
-            line-height: 1.6;
-        }
-        
-        .signal-price {
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        
-        /* Chart Container */
-        .chart-panel {
+        .reason {
+            font-size: 0.95em;
+            padding: 8px;
             background: rgba(255,255,255,0.05);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 5px;
         }
-        
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .chart-title { font-size: 18px; }
-        
-        .timeframe-buttons { display: flex; gap: 8px; }
-        
-        .tf-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            transition: all 0.2s;
-        }
-        
-        .tf-btn:hover { background: rgba(255,255,255,0.2); }
-        .tf-btn.active { background: #3498db; }
-        
-        .chart-container {
-            position: relative;
-            height: 400px;
-        }
-        
-        .indicator-chart {
-            height: 120px;
-            margin-top: 20px;
-        }
-        
-        .crossover-points {
-            margin-top: 15px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        
-        .cross-point {
-            background: rgba(255,255,255,0.1);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-        }
-        
-        .cross-point.buy { background: rgba(0,255,136,0.2); }
-        .cross-point.sell { background: rgba(255,68,68,0.2); }
-        
-        /* Accuracy Stats */
-        .accuracy-panel {
-            background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-            border: 1px solid rgba(102,126,234,0.3);
-        }
-        
-        .accuracy-stats {
+        .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 15px;
-            margin-top: 15px;
+            margin-bottom: 20px;
         }
-        
-        .accuracy-stat {
+        .stat-card {
+            background: linear-gradient(135deg, rgba(102,126,234,0.3), rgba(118,75,162,0.3));
+            padding: 20px;
+            border-radius: 10px;
             text-align: center;
-            padding: 15px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
         }
-        
-        .accuracy-stat .value {
-            font-size: 28px;
-            font-weight: bold;
+        .stat-value { font-size: 2em; font-weight: bold; }
+        .stat-label { color: #a4b0be; font-size: 0.9em; }
+        .pump-dump-alert {
+            animation: pulse 2s infinite;
         }
-        
-        .accuracy-stat .label {
-            font-size: 12px;
-            color: #888;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .mover-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .positive { color: #00ff88; }
+        .negative { color: #ff4757; }
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+            display: inline-block;
+            margin-left: 5px;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .nav-links {
+            margin-top: 10px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin: 0 5px;
+        }
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        #signal-list, #pump-dump-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .timestamp {
+            font-size: 0.8em;
+            color: #747d8c;
             margin-top: 5px;
-        }
-        
-        .accuracy-stat.success .value { color: #00ff88; }
-        .accuracy-stat.failure .value { color: #ff4444; }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
-        
-        /* Responsive */
-        @media (max-width: 1400px) {
-            .main-grid { grid-template-columns: 1fr; }
-            .data-row { grid-template-columns: 40px 80px 90px 70px 60px 60px 60px 80px 70px; font-size: 13px; }
-        }
-        
-        @media (max-width: 768px) {
-            .header { flex-direction: column; gap: 15px; text-align: center; }
-            .accuracy-stats { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>🚀 Crypto Futures Signal System</h1>
+        <div class="exchange-selector">
+            <span>صرافی: </span>
+            <select id="exchange-select" onchange="changeExchange(this.value)">
+                <option value="kucoin">KuCoin</option>
+                <option value="bybit">Bybit</option>
+                <option value="okx">OKX</option>
+                <option value="gate">Gate.io</option>
+                <option value="mexc">MEXC</option>
+                <option value="bitget">Bitget</option>
+            </select>
+        </div>
+        <div class="nav-links">
+            <a href="/">داشبورد</a>
+            <a href="/analytics">آمار و تحلیل</a>
+        </div>
+        <p style="margin-top:10px">
+            <span class="live-dot"></span>
+            <span id="status">در حال اتصال...</span>
+        </p>
+    </div>
+
     <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">🚀 سیستم معاملات فیوچرز</div>
-            <div class="status">
-                <div class="status-item" id="connectionStatus">🔴 در حال اتصال...</div>
-                <div class="status-item" id="lastUpdate">آخرین آپدیت: -</div>
-                <div class="status-item" id="coinCount">ارزها: 0</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-signals">0</div>
+                <div class="stat-label">کل سیگنالها</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="buy-signals">0</div>
+                <div class="stat-label">سیگنال خرید</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="sell-signals">0</div>
+                <div class="stat-label">سیگنال فروش</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pump-dump-count">0</div>
+                <div class="stat-label">پامپ/دامپ</div>
             </div>
         </div>
-        
-        <!-- Navigation -->
-        <div class="nav">
-            <a href="/" class="active">🏠 داشبورد</a>
-            <a href="/analytics">📊 آمار دقت</a>
-        </div>
-        
-        <!-- Source Selector -->
-        <div class="source-panel">
-            <h3>🌐 انتخاب منبع داده (صرافی‌های بدون تحریم)</h3>
-            <div class="source-buttons" id="sourceButtons">
-                <button class="source-btn active" data-source="kucoin">🟢 کوکوین (پیشنهادی)</button>
-                <button class="source-btn" data-source="bybit">بای‌بیت</button>
-                <button class="source-btn" data-source="okx">OKX</button>
-                <button class="source-btn" data-source="mexc">MEXC</button>
-                <button class="source-btn" data-source="gateio">Gate.io</button>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📊 آخرین سیگنالها <span class="live-dot"></span></h2>
+                <div id="signal-list"></div>
             </div>
-        </div>
-        
-        <!-- Pump/Dump Alerts -->
-        <div class="alerts-panel">
-            <h3>🚨 هشدارهای پامپ و دامپ (زنده)</h3>
-            <div class="alerts-scroll" id="alertsContainer">
-                <div style="color: #888; padding: 20px;">در انتظار هشدار...</div>
+
+            <div class="card">
+                <h2>🚀 پامپ و دامپ <span class="live-dot"></span></h2>
+                <div id="pump-dump-list"></div>
             </div>
-        </div>
-        
-        <!-- Main Content -->
-        <div class="main-grid">
-            <!-- Data Grid -->
-            <div>
-                <div class="data-panel">
-                    <div class="data-header">
-                        <h3>📊 250 ارز برتر فیوچرز</h3>
-                        <div class="data-controls">
-                            <input type="text" id="searchInput" placeholder="🔍 جستجو...">
-                            <select id="sortSelect">
-                                <option value="volume">مرتب‌سازی: حجم</option>
-                                <option value="change">مرتب‌سازی: تغییرات</option>
-                                <option value="price">مرتب‌سازی: قیمت</option>
-                                <option value="name">مرتب‌سازی: نام</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="data-body">
-                        <div class="data-row header">
-                            <div>#</div>
-                            <div>نماد</div>
-                            <div>قیمت</div>
-                            <div>تغییر%</div>
-                            <div>RSI</div>
-                            <div>MA7</div>
-                            <div>EMA7</div>
-                            <div>حجم</div>
-                            <div>سیگنال</div>
-                        </div>
-                        <div id="priceGrid"></div>
-                    </div>
-                </div>
-                
-                <!-- Chart -->
-                <div class="chart-panel">
-                    <div class="chart-header">
-                        <h3 class="chart-title">📈 چارت: <span id="chartSymbol">BTC/USDT</span></h3>
-                        <div class="timeframe-buttons">
-                            <button class="tf-btn active" data-tf="1m">1m</button>
-                            <button class="tf-btn" data-tf="5m">5m</button>
-                            <button class="tf-btn" data-tf="15m">15m</button>
-                            <button class="tf-btn" data-tf="1h">1h</button>
-                            <button class="tf-btn" data-tf="4h">4h</button>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="mainChart"></canvas>
-                    </div>
-                    <div class="indicator-chart">
-                        <canvas id="rsiChart"></canvas>
-                    </div>
-                    <div class="crossover-points" id="crossoverPoints"></div>
-                </div>
-                
-                <!-- Accuracy Stats -->
-                <div class="accuracy-panel">
-                    <h3>📈 آمار دقت سیگنال‌ها (24 ساعت اخیر)</h3>
-                    <div class="accuracy-stats">
-                        <div class="accuracy-stat success">
-                            <div class="value" id="successRate">0%</div>
-                            <div class="label">نرخ موفقیت</div>
-                        </div>
-                        <div class="accuracy-stat">
-                            <div class="value" id="totalSignals">0</div>
-                            <div class="label">کل سیگنال‌ها</div>
-                        </div>
-                        <div class="accuracy-stat success">
-                            <div class="value" id="successCount">0</div>
-                            <div class="label">موفق</div>
-                        </div>
-                        <div class="accuracy-stat failure">
-                            <div class="value" id="failCount">0</div>
-                            <div class="label">ناموفق</div>
-                        </div>
-                    </div>
-                </div>
+
+            <div class="card">
+                <h2>📈 برترین رشدها</h2>
+                <div id="gainers-list"></div>
             </div>
-            
-            <!-- Signals Panel -->
-            <div class="signals-panel">
-                <h3>📡 سیگنال‌های معاملاتی (زنده)</h3>
-                <div id="signalsContainer">
-                    <div style="color: #888; text-align: center; padding: 30px;">
-                        در حال تحلیل بازار...
-                    </div>
-                </div>
+
+            <div class="card">
+                <h2>📉 بیشترین افت</h2>
+                <div id="losers-list"></div>
             </div>
         </div>
     </div>
-    
+
     <script>
-        // ═══════════════════════════════════════════════════════════
-        // متغیرهای گلوبال
-        // ═══════════════════════════════════════════════════════════
         const socket = io();
-        let allPrices = [];
-        let mainChart = null;
-        let rsiChart = null;
-        let currentSymbol = 'BTCUSDT';
-        let currentTimeframe = '1m';
-        
-        // ═══════════════════════════════════════════════════════════
-        // رویدادهای سوکت
-        // ═══════════════════════════════════════════════════════════
+        let allSignals = [];
+        let pumpDumpAlerts = [];
+
         socket.on('connect', () => {
-            document.getElementById('connectionStatus').className = 'status-item online';
-            document.getElementById('connectionStatus').innerHTML = '🟢 متصل';
+            document.getElementById('status').textContent = 'متصل ✅';
         });
-        
+
         socket.on('disconnect', () => {
-            document.getElementById('connectionStatus').className = 'status-item offline';
-            document.getElementById('connectionStatus').innerHTML = '🔴 قطع شده';
+            document.getElementById('status').textContent = 'قطع شده ❌';
         });
-        
-        socket.on('prices_update', (data) => {
-            allPrices = data.prices || [];
-            updatePriceGrid();
-            document.getElementById('lastUpdate').textContent = 
-                'آخرین آپدیت: ' + new Date().toLocaleTimeString('fa-IR');
-            document.getElementById('coinCount').textContent = 
-                'ارزها: ' + allPrices.length;
-        });
-        
-        socket.on('signals_update', (data) => {
-            updateSignals(data.signals || []);
-            updateAlerts(data.pump_dump || []);
-        });
-        
-        socket.on('validation_update', (data) => {
-            if (data.stats && data.stats.last_24h) {
-                updateAccuracyStats(data.stats.last_24h);
-            }
-        });
-        
-        // ═══════════════════════════════════════════════════════════
-        // آپدیت گرید قیمت‌ها
-        // ═══════════════════════════════════════════════════════════
-        function updatePriceGrid() {
-            const container = document.getElementById('priceGrid');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const sortBy = document.getElementById('sortSelect').value;
-            
-            let filtered = allPrices.filter(p => 
-                p.symbol.toLowerCase().includes(searchTerm)
-            );
-            
-            // مرتب‌سازی
-            switch(sortBy) {
-                case 'volume':
-                    filtered.sort((a, b) => (b.quote_volume || 0) - (a.quote_volume || 0));
-                    break;
-                case 'change':
-                    filtered.sort((a, b) => 
-                        Math.abs(b.price_change_percent || 0) - Math.abs(a.price_change_percent || 0)
-                    );
-                    break;
-                case 'price':
-                    filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-                    break;
-                case 'name':
-                    filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
-                    break;
-            }
-            
-            container.innerHTML = filtered.slice(0, 250).map((p, i) => {
-                const changeClass = (p.price_change_percent || 0) >= 0 ? 'positive' : 'negative';
-                const changeSign = (p.price_change_percent || 0) >= 0 ? '+' : '';
-                
-                return `
-                    <div class="data-row" onclick="loadChart('${p.symbol}')">
-                        <div>${i + 1}</div>
-                        <div><strong>${p.symbol}</strong></div>
-                        <div>$${formatNumber(p.price)}</div>
-                        <div class="${changeClass}">${changeSign}${(p.price_change_percent || 0).toFixed(2)}%</div>
-                        <div>-</div>
-                        <div>-</div>
-                        <div>-</div>
-                        <div>${formatVolume(p.quote_volume)}</div>
-                        <div>-</div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // ═══════════════════════════════════════════════════════════
-        // آپدیت سیگنال‌ها
-        // ═══════════════════════════════════════════════════════════
-        function updateSignals(signals) {
-            const container = document.getElementById('signalsContainer');
-            
-            if (!signals || signals.length === 0) {
-                container.innerHTML = `
-                    <div style="color: #888; text-align: center; padding: 30px;">
-                        سیگنالی یافت نشد
-                    </div>
-                `;
-                return;
-            }
-            
-            // مرتب‌سازی بر اساس قدرت
-            signals.sort((a, b) => (b.strength || 0) - (a.strength || 0));
-            
-            container.innerHTML = signals.slice(0, 20).map(s => {
-                const cardClass = s.signal_type === 'BUY' ? 'buy' : 'sell';
-                const typeEmoji = s.signal_type === 'BUY' ? '🟢 خرید' : '🔴 فروش';
-                const strengthColor = s.strength >= 70 ? '#00ff88' : 
-                                     s.strength >= 50 ? '#ffa500' : '#ff4444';
-                
-                return `
-                    <div class="signal-card ${cardClass}" onclick="loadChart('${s.symbol}')">
-                        <div class="signal-header">
-                            <span class="signal-symbol">${s.symbol}</span>
-                            <span class="signal-strength" style="background: ${strengthColor}">${s.strength}%</span>
-                        </div>
-                        <div class="signal-type">${typeEmoji}</div>
-                        <div class="signal-reason">${s.reason || ''}</div>
-                        <div class="signal-price">💰 قیمت: $${formatNumber(s.price)}</div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // ═══════════════════════════════════════════════════════════
-        // آپدیت هشدارها
-        // ═══════════════════════════════════════════════════════════
-        function updateAlerts(alerts) {
-            const container = document.getElementById('alertsContainer');
-            
-            if (!alerts || alerts.length === 0) {
-                container.innerHTML = `
-                    <div style="color: #888; padding: 20px;">در انتظار هشدار...</div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = alerts.map(a => {
-                const cardClass = a.alert_type === 'PUMP' ? 'pump' : '';
-                const emoji = a.alert_type === 'PUMP' ? '🚀' : '📉';
-                const changeClass = a.price_change >= 0 ? 'positive' : 'negative';
-                
-                return `
-                    <div class="alert-card ${cardClass}" onclick="loadChart('${a.symbol}')">
-                        <div class="symbol">${a.symbol}</div>
-                        <div class="type">${emoji} ${a.alert_type}</div>
-                        <div class="stats">
-                            تغییر قیمت: <span class="${changeClass}">${a.price_change}%</span><br>
-                            تغییر حجم: ${a.volume_change}%<br>
-                            در ${a.time_period} گذشته
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // ═══════════════════════════════════════════════════════════
-        // آپدیت آمار دقت
-        // ═══════════════════════════════════════════════════════════
-        function updateAccuracyStats(stats) {
-            document.getElementById('successRate').textContent = (stats.success_rate || 0) + '%';
-            document.getElementById('totalSignals').textContent = stats.total_signals || 0;
-            document.getElementById('successCount').textContent = stats.successful || 0;
-            document.getElementById('failCount').textContent = stats.failed || 0;
-        }
-        
-        // ═══════════════════════════════════════════════════════════
-        // لود چارت
-        // ═══════════════════════════════════════════════════════════
-        async function loadChart(symbol) {
-            currentSymbol = symbol;
-            document.getElementById('chartSymbol').textContent = symbol;
-            
-            try {
-                const response = await fetch(`/api/chart/${symbol}?timeframe=${currentTimeframe}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error(data.error);
-                    return;
+
+        socket.on('new_signals', (signals) => {
+            signals.forEach(sig => {
+                allSignals.unshift(sig);
+                if (sig.type && (sig.type.includes('PUMP') || sig.type.includes('DUMP'))) {
+                    pumpDumpAlerts.unshift(sig);
                 }
-                
-                renderMainChart(data);
-                renderRsiChart(data);
-                renderCrossovers(data);
-                
-            } catch (error) {
-                console.error('خطا در لود چارت:', error);
+            });
+            allSignals = allSignals.slice(0, 100);
+            pumpDumpAlerts = pumpDumpAlerts.slice(0, 50);
+            updateUI();
+        });
+
+        socket.on('cache_update', (cache) => {
+            allSignals = cache.signals || [];
+            pumpDumpAlerts = cache.pump_dump || [];
+            if (cache.movers) {
+                updateMovers(cache.movers);
             }
+            updateUI();
+        });
+
+        function updateUI() {
+            // آمار
+            document.getElementById('total-signals').textContent = allSignals.length;
+            document.getElementById('buy-signals').textContent = 
+                allSignals.filter(s => s.signal === 'BUY').length;
+            document.getElementById('sell-signals').textContent = 
+                allSignals.filter(s => s.signal === 'SELL').length;
+            document.getElementById('pump-dump-count').textContent = pumpDumpAlerts.length;
+
+            // لیست سیگنالها
+            const signalList = document.getElementById('signal-list');
+            signalList.innerHTML = allSignals.slice(0, 20).map(sig => `
+                <div class="signal-item ${sig.signal?.toLowerCase() || ''}">
+                    <div class="signal-header">
+                        <span class="symbol">${sig.symbol || 'N/A'}</span>
+                        <span class="strength ${getStrengthClass(sig.strength)}">${sig.strength || 50}%</span>
+                    </div>
+                    <div class="signal-type">${sig.type || 'SIGNAL'} - ${sig.signal || 'NEUTRAL'}</div>
+                    <div class="reason">${sig.reason || ''}</div>
+                    <div class="timestamp">${formatTime(sig.detected_at || sig.timestamp)}</div>
+                </div>
+            `).join('');
+
+            // پامپ و دامپ
+            const pumpDumpList = document.getElementById('pump-dump-list');
+            pumpDumpList.innerHTML = pumpDumpAlerts.slice(0, 15).map(alert => `
+                <div class="signal-item pump-dump-alert ${alert.signal?.toLowerCase() || ''}">
+                    <div class="signal-header">
+                        <span class="symbol">${alert.symbol}</span>
+                        <span class="strength high">${alert.alert_type || alert.type}</span>
+                    </div>
+                    <div class="reason">${alert.reason || ''}</div>
+                    <div>
+                        <span class="${alert.price_change >= 0 ? 'positive' : 'negative'}">
+                            ${alert.price_change >= 0 ? '+' : ''}${alert.price_change?.toFixed(2) || 0}%
+                        </span>
+                        | حجم: +${alert.volume_change?.toFixed(0) || 0}%
+                    </div>
+                    <div class="timestamp">${formatTime(alert.detected_at || alert.timestamp)}</div>
+                </div>
+            `).join('');
         }
-        
-        function renderMainChart(data) {
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            
-            if (mainChart) mainChart.destroy();
-            
-            const candles = data.candles || [];
-            const labels = candles.map(c => new Date(c.timestamp));
-            const prices = candles.map(c => c.close);
-            
-            mainChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'قیمت',
-                            data: prices,
-                            borderColor: '#3498db',
-                            borderWidth: 2,
-                            fill: false,
-                            pointRadius: 0,
-                            tension: 0.1
-                        },
-                        {
-                            label: 'MA 7',
-                            data: data.indicators?.ma_7 || [],
-                            borderColor: '#e74c3c',
-                            borderWidth: 1,
-                            fill: false,
-                            pointRadius: 0
-                        },
-                        {
-                            label: 'MA 25',
-                            data: data.indicators?.ma_25 || [],
-                            borderColor: '#f1c40f',
-                            borderWidth: 1,
-                            fill: false,
-                            pointRadius: 0
-                        },
-                        {
-                            label: 'EMA 7',
-                            data: data.indicators?.ema_7 || [],
-                            borderColor: '#9b59b6',
-                            borderWidth: 1,
-                            borderDash: [5, 5],
-                            fill: false,
-                            pointRadius: 0
-                        },
-                        {
-                            label: 'UT Bot Stop',
-                            data: data.indicators?.atr_stop || [],
-                            borderColor: '#00ff88',
-                            borderWidth: 2,
-                            fill: false,
-                            pointRadius: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { intersect: false, mode: 'index' },
-                    plugins: {
-                        legend: { 
-                            labels: { color: '#fff', font: { size: 11 } },
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            ticks: { color: '#888', maxTicksLimit: 10 },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        },
-                        y: {
-                            ticks: { color: '#888' },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        }
-                    }
+
+        function updateMovers(movers) {
+            const gainersList = document.getElementById('gainers-list');
+            gainersList.innerHTML = (movers.gainers || []).slice(0, 10).map(m => `
+                <div class="mover-item">
+                    <span>${m.symbol}</span>
+                    <span class="positive">+${m.change?.toFixed(2)}%</span>
+                </div>
+            `).join('');
+
+            const losersList = document.getElementById('losers-list');
+            losersList.innerHTML = (movers.losers || []).slice(0, 10).map(m => `
+                <div class="mover-item">
+                    <span>${m.symbol}</span>
+                    <span class="negative">${m.change?.toFixed(2)}%</span>
+                </div>
+            `).join('');
+        }
+
+        function getStrengthClass(strength) {
+            if (strength >= 80) return 'high';
+            if (strength >= 60) return 'medium';
+            return 'low';
+        }
+
+        function formatTime(ts) {
+            if (!ts) return '';
+            const date = new Date(ts);
+            return date.toLocaleTimeString('fa-IR');
+        }
+
+        function changeExchange(exchange) {
+            fetch('/api/exchange/change', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({exchange: exchange})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('صرافی تغییر کرد به: ' + exchange);
+                    location.reload();
                 }
             });
         }
-        
-        function renderRsiChart(data) {
-            const ctx = document.getElementById('rsiChart').getContext('2d');
-            
-            if (rsiChart) rsiChart.destroy();
-            
-            const candles = data.candles || [];
-            const labels = candles.map(c => new Date(c.timestamp));
-            
-            rsiChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'RSI',
-                        data: data.indicators?.rsi || [],
-                        borderColor: '#e74c3c',
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            min: 0,
-                            max: 100,
-                            ticks: { color: '#888' },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function renderCrossovers(data) {
-            const container = document.getElementById('crossoverPoints');
-            const allCrosses = [
-                ...(data.crossovers?.ma || []),
-                ...(data.crossovers?.ema || [])
-            ].slice(-10);
-            
-            if (allCrosses.length === 0) {
-                container.innerHTML = '<span style="color:#888">نقطه تلاقی یافت نشد</span>';
-                return;
-            }
-            
-            container.innerHTML = allCrosses.map(c => {
-                const crossClass = c.signal.includes('BUY') ? 'buy' : 'sell';
-                const emoji = c.signal.includes('BUY') ? '🟢' : '🔴';
-                return `<span class="cross-point ${crossClass}">${emoji} ${c.type} @ $${formatNumber(c.price)}</span>`;
-            }).join('');
-        }
-        
-        // ═══════════════════════════════════════════════════════════
-        // تغییر منبع
-        // ═══════════════════════════════════════════════════════════
-        document.getElementById('sourceButtons').addEventListener('click', async (e) => {
-            if (e.target.classList.contains('source-btn')) {
-                const source = e.target.dataset.source;
-                
-                document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                
-                try {
-                    const response = await fetch(`/api/switch-source/${source}`);
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        socket.emit('request_update');
-                    }
-                } catch (error) {
-                    console.error('خطا:', error);
-                }
-            }
+
+        // بارگذاری اولیه
+        fetch('/api/signals').then(r => r.json()).then(data => {
+            allSignals = data;
+            updateUI();
         });
-        
-        // ═══════════════════════════════════════════════════════════
-        // تغییر تایم‌فریم
-        // ═══════════════════════════════════════════════════════════
-        document.querySelector('.timeframe-buttons').addEventListener('click', (e) => {
-            if (e.target.classList.contains('tf-btn')) {
-                document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                currentTimeframe = e.target.dataset.tf;
-                loadChart(currentSymbol);
-            }
+
+        fetch('/api/pump-dump').then(r => r.json()).then(data => {
+            pumpDumpAlerts = data;
+            updateUI();
         });
-        
-        // ═══════════════════════════════════════════════════════════
-        // رویدادهای فیلتر
-        // ═══════════════════════════════════════════════════════════
-        document.getElementById('searchInput').addEventListener('input', updatePriceGrid);
-        document.getElementById('sortSelect').addEventListener('change', updatePriceGrid);
-        
-        // ═══════════════════════════════════════════════════════════
-        // توابع کمکی
-        // ═══════════════════════════════════════════════════════════
-        function formatNumber(num) {
-            if (!num || isNaN(num)) return '0';
-            num = parseFloat(num);
-            if (num >= 1000) return num.toLocaleString('en-US', {maximumFractionDigits: 2});
-            if (num >= 1) return num.toFixed(2);
-            if (num >= 0.0001) return num.toFixed(6);
-            return num.toExponential(4);
-        }
-        
-        function formatVolume(vol) {
-            if (!vol || isNaN(vol)) return '0';
-            vol = parseFloat(vol);
-            if (vol >= 1e9) return (vol / 1e9).toFixed(2) + 'B';
-            if (vol >= 1e6) return (vol / 1e6).toFixed(2) + 'M';
-            if (vol >= 1e3) return (vol / 1e3).toFixed(2) + 'K';
-            return vol.toFixed(2);
-        }
-        
-        // ═══════════════════════════════════════════════════════════
-        // لود اولیه
-        // ═══════════════════════════════════════════════════════════
-        async function init() {
-            try {
-                // دریافت قیمت‌ها
-                const pricesRes = await fetch('/api/prices');
-                allPrices = await pricesRes.json();
-                updatePriceGrid();
-                
-                // دریافت آمار دقت
-                const accuracyRes = await fetch('/api/accuracy?hours=24');
-                const accuracyData = await accuracyRes.json();
-                updateAccuracyStats(accuracyData);
-                
-                // لود چارت اول
-                loadChart('BTCUSDT');
-                
-            } catch (error) {
-                console.error('خطا در لود اولیه:', error);
-            }
-        }
-        
-        init();
+
+        fetch('/api/movers').then(r => r.json()).then(updateMovers);
     </script>
 </body>
 </html>
